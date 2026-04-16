@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, ScrollView, FlatList, TextInput } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { getSensorData } from '../services/sensorService';
+// import { getSensorData } from '../services/sensorService';
+import { subscribeToSensor } from "../services/sensorService";
 
 const SensorDashboard = () => {
 
-  const [threshold, setThreshold] = useState(70);
+  const [threshold, setThreshold] = useState(30);
   const [dataPoints, setDataPoints] = useState([0]);
   const [labels, setLabels] = useState(['0:00']);
   const [latestValue, setLatestValue] = useState(0);
@@ -32,11 +33,33 @@ const SensorDashboard = () => {
   //   return () => clearInterval(interval);
   // }, [threshold]);
 
-  useEffect(() => {
-  const interval = setInterval(async () => {
-    const data = await getSensorData();
-    if (!data) return;
+  // useEffect(() => {
+  // const interval = setInterval(async () => {
+  //   const data = await getSensorData();
+  //   if (!data) return;
 
+  //   const newValue = data.value;
+  //   const now = new Date(data.timestamp).toLocaleTimeString();
+
+  //   setDataPoints(prev => [...prev.slice(-5), newValue]);
+  //   setLabels(prev => [...prev.slice(-5), now]);
+  //   setLatestValue(newValue.toFixed(2));
+
+  //   if (newValue < threshold) {
+  //     setEvents(prev => [
+  //       { id: Date.now().toString(), time: now, value: newValue.toFixed(2) },
+  //       ...prev.slice(0, 9)
+  //     ]);
+  //   }
+
+  // }, 3000);
+
+  // return () => clearInterval(interval);
+  // }, []);
+
+  
+useEffect(() => {
+  const unsubscribe = subscribeToSensor((data) => {
     const newValue = data.value;
     const now = new Date(data.timestamp).toLocaleTimeString();
 
@@ -50,11 +73,10 @@ const SensorDashboard = () => {
         ...prev.slice(0, 9)
       ]);
     }
+  });
 
-  }, 3000);
-
-  return () => clearInterval(interval);
-  }, []);
+  return unsubscribe;
+}, [threshold]);
 
   return (
     <View style={styles.container}>
@@ -154,7 +176,11 @@ const SensorDashboard = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
-  scrollContainer: { alignItems: 'center', paddingVertical: 16 },
+  scrollContainer: { 
+  alignItems: 'center', 
+  paddingTop: 40,   // 👈 adds space at top of screen
+  paddingBottom: 16 
+},
 
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
 
