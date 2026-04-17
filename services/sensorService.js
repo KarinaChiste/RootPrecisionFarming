@@ -29,9 +29,8 @@
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
-// 🔹 MOCK stream (simulated updates)
 export const subscribeToSensor = (callback) => {
   if (USE_MOCK) {
     const interval = setInterval(() => {
@@ -42,24 +41,30 @@ export const subscribeToSensor = (callback) => {
       });
     }, 3000);
 
-    // return cleanup function (important)
     return () => clearInterval(interval);
   }
 
-  // 🔹 FIREBASE real-time listener
-  const ref = doc(db, "sensors", "latest");
+  // 🔹 LOCAL FLASK API POLLING
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch("http://10.0.0.212:5000/api/data");
+      const data = await res.json();
+      console.log(data);
 
-  const unsubscribe = onSnapshot(ref, (snap) => {
-    if (!snap.exists()) return;
+      // adapt to your API format
+      callback({
+        value: data.moisture, // or whatever field you use
+        voltage: data.voltage,
+        rssi: data.rssi,
+        timestamp: data.timestamp || new Date().toISOString(),
+        source: "local-api",
+      });
 
-    const data = snap.data();
+    } catch (err) {
+      console.error("Sensor API error:", err);
+    }
+  }, 3000);
 
-    callback({
-      value: data.value,
-      timestamp: data.timestamp,
-      source: "firebase",
-    });
-  });
-
-  return unsubscribe;
+  // cleanup function
+  return () => clearInterval(interval);
 };
